@@ -128,8 +128,10 @@ do {
     } else {
         threadPool->enumState = DESTROY;
     }
-
+    pthread_mutex_lock(&threadPool->qEndlock);
     threadPool->stop = 1;
+    pthread_cond_broadcast(&threadPool->q_empty);
+    pthread_mutex_unlock(&threadPool->qEndlock);
     int i;
     int numOfThreads = threadPool->num_threads;
     //joining the threads
