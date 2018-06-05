@@ -6,6 +6,7 @@
 #include "threadPool.h"
 
 
+
 ThreadPool* tpCreate(int numOfThreads){
 
     if (numOfThreads <= 0) {
@@ -121,7 +122,7 @@ void tpDestroy(ThreadPool* threadPool, int shouldWaitForTasks){
         || pthread_mutex_unlock(&threadPool->qlock) > 0) {
         fail();
     }
-do {
+
     //if dont have tasks in the queue
     if (!shouldWaitForTasks) {
         threadPool->enumState = AFTER_JOIN;
@@ -130,15 +131,19 @@ do {
     }
     pthread_mutex_lock(&threadPool->qEndlock);
     threadPool->stop = 1;
-    pthread_cond_broadcast(&threadPool->q_empty);
     pthread_mutex_unlock(&threadPool->qEndlock);
+
     int i;
     int numOfThreads = threadPool->num_threads;
+
+    pthread_mutex_lock(&threadPool->qEndlock); //lock before join
     //joining the threads
     for (i = 0; i < numOfThreads; ++i) {
         pthread_join(threadPool->threads[i], NULL);
     }
     threadPool->enumState = END;
+    pthread_cond_signal(&threadPool->q_empty);
+    pthread_mutex_unlock(&threadPool->qEndlock); //unlock before join
 
 
     while (!osIsQueueEmpty(threadPool->queue)) {
@@ -152,7 +157,7 @@ do {
     free(threadPool);
     pthread_mutex_destroy(&threadPool->qlock);
     pthread_mutex_destroy(&threadPool->qEndlock);
-} while(0);
+
 
 }
 
